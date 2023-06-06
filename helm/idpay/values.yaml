@@ -1,0 +1,48 @@
+microservice-chart:
+  namespace: "rtd"
+  nameOverride: ""
+  fullnameOverride: ""
+
+  livenessProbe:
+    handlerType: httpGet
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    failureThreshold: 6
+    periodSeconds: 10
+
+  readinessProbe:
+    handlerType: httpGet
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    failureThreshold: 6
+    periodSeconds: 10
+
+  podAnnotations: { }
+
+  deployment:
+    create: true
+
+  service:
+    create: true
+    type: ClusterIP
+    ports:
+      - 3000
+
+  ingress:
+    create: false
+
+  serviceAccount:
+    create: false
+    annotations: {}
+    name: ""
+
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+
+  securityContext:
+    allowPrivilegeEscalation: false

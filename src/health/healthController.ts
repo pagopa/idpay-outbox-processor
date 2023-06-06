@@ -6,7 +6,6 @@ import {
     MicroserviceHealthIndicator,
     MongooseHealthIndicator
 } from "@nestjs/terminus";
-import {Transport} from "@nestjs/microservices";
 
 @Controller("health")
 export class HealthController {

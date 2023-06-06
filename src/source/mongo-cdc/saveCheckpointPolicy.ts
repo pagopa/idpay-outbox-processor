@@ -1,4 +1,4 @@
-import {OutboxMessage} from "./consumer/outboxConsumer";
+import { OutboxMessage } from "../sourceConnector"
 
 export type SaveCheckpointPolicy = (messageCount: number, message: OutboxMessage) => boolean
 export const saveCheckpointEvery = (times: number): SaveCheckpointPolicy =>

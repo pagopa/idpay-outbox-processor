@@ -1,9 +1,9 @@
 import {fromAsyncIterable} from "rxjs/internal/observable/innerFrom";
-import {retry, timer} from "rxjs";
-import {OutboxConsumer, OutboxMessage} from "./consumer/outboxConsumer";
+import {BehaviorSubject, bufferToggle, connectable, delay, filter, interval, map, mergeMap, Observable, retry, share, Subject, take, takeWhile, tap, timer} from "rxjs";
+import {OutboxMessage, SourceConnector} from "./sourceConnector";
 
 export namespace Observables {
-    export function fromOutboxConsumer(stream: OutboxConsumer) {
+    export function fromSourceConnector(stream: SourceConnector) {
         return fromAsyncIterable(new class implements AsyncIterable<OutboxMessage> {
             [Symbol.asyncIterator](): AsyncIterator<OutboxMessage> {
                 return {
@@ -18,6 +18,13 @@ export namespace Observables {
                 }
             }
         });
+    }
+
+    export function fromSourceConnectorAsHot(stream: SourceConnector) {
+        return connectable(
+            Observables.fromSourceConnector(stream),
+            { connector: () => new Subject<OutboxMessage>(), resetOnDisconnect: false }
+        );
     }
 }
 
@@ -38,5 +45,3 @@ export function retryWithBackoff<T>(options: {
         }
     });
 }
-
-

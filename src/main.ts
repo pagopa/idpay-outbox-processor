@@ -1,14 +1,16 @@
-import {NestFactory} from '@nestjs/core';
-import {AppModule} from "./app.module";
+import { NestFactory } from "@nestjs/core";
+import { getConfiguration } from "./config/index";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
-    const app = await NestFactory.createApplicationContext(AppModule, {
+    const app = await NestFactory.create(AppModule, {
         autoFlushLogs: true,
     });
-    await app.init();
+    await app.listen(3000);
 }
 
-bootstrap()
+getConfiguration()
+    .then(_ => bootstrap())
     .catch((reason) => {
         console.log(`Failed to boostrap`)
         console.log(reason)

@@ -1,0 +1,28 @@
+microservice-chart:
+  image:
+    repository: cstardcommonacr.azurecr.io/idpaylolabpayment
+    tag: latest
+    pullPolicy: Always
+
+  ingress:
+    host: "dev01.rtd.internal.dev.cstar.pagopa.it"
+
+  resources:
+    requests:
+      memory: "200Mi"
+      cpu: "200m"
+    limits:
+      memory: "400Mi"
+      cpu: "400m"
+
+  envSecret:
+    aks-api-url: cstar-d-weu-dev01-aks-apiserver-url
+    MONGO_DB_URI: mongo-db-connection-uri
+
+  envConfig:
+    OUTBOX_COLLECTION_NAME: "test"
+    MONGO_DB_NAME: "rtd"
+
+  keyvault:
+    name: "cstar-d-rtd-kv"
+    tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
