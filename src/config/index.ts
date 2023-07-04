@@ -1,54 +1,38 @@
-import { readFile } from "fs";
-import * as yaml from "js-yaml";
+import * as dotenv from "dotenv"
+import * as z from "zod"
 
-let config: any | undefined;
+// load environment variables from .env file. 
+// It's useful for local developing
+dotenv.config();
 
-export default config;
-export async function getConfiguration(): Promise<any> {
-    if (!config) {
-        config = await loadConfiguration();
-    }
-    return config;
-}
+const appConfigSchema = z.object({
+    mongoDbUri: z.string().nonempty(),
+    mongoDbName: z.string().nonempty(),
+    outboxCollectionName: z.string().nonempty(),
+    checkpointConfig: z.object({
+        checkpointMongoUri: z.string(),
+        checkpointEvery: z.number().default(1),
+    }).optional(),
+    kafkaConfig: z.object({
+        broker: z.string(),
+        topic: z.string(),
+        saslJaas: z.string().optional()
+    }).optional()
+});
 
-async function loadConfiguration(): Promise<any> {
-    const configFile = await new Promise<string>((resolve, reject) => {
-        readFile("config.yaml", "utf-8", (err, data) => {
-            if (err) { reject(err); } else { resolve(data) };
-        });
-    });
-    const config = yaml.load(configFile) as any;
-    // Function to evaluate the expression
-    const evaluateExpression = (expression: string) => {
-        const regex = /\$\{([^\}]+)\}/g;
-        const match = regex.exec(expression);
-        if (match) {
-            const envVariable = match[1];
-            const firstColon = envVariable.indexOf(':');
-            if (firstColon > 0) {
-                const variable = envVariable.substring(0, firstColon);
-                const fallback = envVariable.substring(firstColon + 1);
-                return process.env[variable.trim()] || fallback?.trim();
-            } else {
-                return process.env[envVariable];
-            }
-        }
-        return expression;
-    };
+export type AppConfig = z.infer<typeof appConfigSchema>;
 
-    // Evaluate expressions in the configuration object
-    const evaluateConfig = (obj: any) => {
-        if (typeof obj === 'object') {
-            for (const key in obj) {
-                if (typeof obj[key] === 'object') {
-                    evaluateConfig(obj[key]);
-                } else if (typeof obj[key] === 'string') {
-                    obj[key] = evaluateExpression(obj[key]);
-                }
-            }
-        }
-    };
-    // Evaluate expressions in the configuration
-    evaluateConfig(config);
-    return config;
-}
+export const appConfig: AppConfig = appConfigSchema.parse({
+    mongoDbUri: process.env.MONGO_DB_URI,
+    mongoDbName: process.env.MONGO_DB_NAME || "rtd",
+    outboxCollectionName: process.env.OUTBOX_COLLECTION_NAME,
+    checkpointConfig: process.env.CHECKPOINT_MONGODB_URI ? {
+        checkpointMongoUri: process.env.CHECKPOINT_MONGODB_URI,
+        checkpointEvery: process.env.CHECKPOINT_EVERY
+    } : undefined,
+    kafkaConfig: process.env.OUTBOX_KAFKA_BROKER ? {
+        broker: process.env.OUTBOX_KAFKA_BROKER,
+        topic: process.env.OUTBOX_KAFKA_TOPIC,
+        saslJass: process.env.OUTBOX_KAFKA_SASL_JAAS,
+    } : undefined
+});

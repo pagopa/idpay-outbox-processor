@@ -323,3 +323,5 @@ dist
 # .pnp.*
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,intellij+all,webstorm+all,node,yarn
+
+*.env

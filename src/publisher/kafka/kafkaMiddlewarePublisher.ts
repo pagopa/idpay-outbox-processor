@@ -5,15 +5,19 @@ import { OutboxMessage } from "../../source/sourceConnector";
 import { Publisher } from "../publisher";
 
 
-export class KafkaMiddlewarePublisher implements Publisher {
+/**
+ * A kafka publisher which implements pipeline publisher interface.
+ */
+export class KafkaPublisher implements Publisher {
 
     constructor(
         private readonly kafka: ClientKafka,
-        private readonly topic: string
+        private readonly topic: string,
+        private readonly logger: Logger = new Logger(KafkaPublisher.name),
     ) { }
 
     send(message: OutboxMessage): Promise<OutboxMessage> {
-        Logger.log(`Send evento to kafka for document ${JSON.stringify(message.key)}`);
+        this.logger.log(`Send evento to kafka for document ${JSON.stringify(message.key)}`);
         return lastValueFrom(this.kafka.emit(this.topic, {
             value: JSON.stringify(message.value),
             key: JSON.stringify(message.key)

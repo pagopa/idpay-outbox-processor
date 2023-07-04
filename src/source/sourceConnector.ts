@@ -1,3 +1,4 @@
+import { HealthIndicator } from "@nestjs/terminus";
 import {SourceInfo} from "./mongo-cdc/sourceInfo";
 
 export class OutboxMessage {
@@ -5,7 +6,7 @@ export class OutboxMessage {
         public readonly rootKey: any,
         public readonly key: any,
         public readonly value: any,
-        public readonly checkpoint?: SourceInfo
+        public readonly source?: SourceInfo
     ) {}
 }
 

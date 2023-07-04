@@ -10,11 +10,12 @@ export class StatisticsMonitor {
     private messageDelays: number[] = [0];
     private nextMessageDelayIndex = 0;
     private messageDelayWindow = 10;
-    private lastProcessTime: number
+    private lastProcessTime: number | undefined
 
     constructor(
         private readonly measureIntervalMillis: number
     ) {
+        this.lastProcessTime = undefined;
         Logger.debug(`Measuring throughput using sampling rate of ${measureIntervalMillis}ms`, "PERFORMANCE");
     }
 

@@ -5,11 +5,12 @@ import {OutboxMessage, SourceConnector} from "../sourceConnector";
 import {MongoSourceCdcConnectorConfig} from "./mongoSourceCdcConnectorConfig";
 import {SourceInfo} from "./sourceInfo";
 import {sleep} from "../../utils";
+import { HealthIndicator, MongooseHealthIndicator } from "@nestjs/terminus";
 
 const defaultConfig: MongoSourceCdcConnectorConfig = {
     aggregationPipeline: [{$match: {operationType: "insert"}}],
     idleTimeoutMillis: 1000,
-    checkpointKey: "checkpoint"
+    checkpointConfig: undefined
 }
 
 export class MongoSourceCdcConnector implements SourceConnector {
@@ -23,11 +24,13 @@ export class MongoSourceCdcConnector implements SourceConnector {
 
     private cursor?: mongoose.mongo.ChangeStream<any, any>;
     private committedMessages: number = 0;
+    private isCheckpointSaveEnabled = false;
 
     constructor(
         private readonly options: MongoSourceCdcConnectorConfig = defaultConfig,
         readonly collection: Collection<AnyObject>
     ) {
+        this.isCheckpointSaveEnabled = (options.checkpointConfig && options.checkpointConfig.resumeTokenSavePolicy != undefined) ?? false
     }
 
     async next(): Promise<OutboxMessage> {
@@ -40,16 +43,17 @@ export class MongoSourceCdcConnector implements SourceConnector {
     }
 
     commit(message: OutboxMessage): Promise<any> {
-        const shouldSave = this.options.checkpointRepository && this.options.saveCheckpointPolicy?.call(this, this.committedMessages + 1, message);
-        const savePromise = shouldSave && message.checkpoint ?
-            () => this.options.checkpointRepository!.save(message.checkpoint!).then(_ => this.committedMessages = 0) :
-            () => Promise.resolve();
+        if (this.isCheckpointSaveEnabled) {
+            const shouldSave = this.options.checkpointConfig?.resumeTokenSavePolicy?.call(this, this.committedMessages + 1, message);
 
-        if (!message.checkpoint) {
-            Logger.warn("No checkpoint for message, could lead to message duplication")
+            if (shouldSave && message.source) {
+                return this.options.checkpointConfig!.resumeTokenRepository.save(message.source!)
+                    .then(_ => this.committedMessages = 0);
+            } else if (!message.source) {
+                Logger.warn("No checkpoint for message, could lead to message duplication")
+            }
         }
-
-        return savePromise().then(_ => this.committedMessages += 1);
+        return Promise.resolve();
     }
 
     async close(): Promise<void> {
@@ -104,20 +108,21 @@ export class MongoSourceCdcConnector implements SourceConnector {
 
     // resume cdc stream
     private createOrResumeStream(): Promise<mongoose.mongo.ChangeStream<any, any>> {
-        if (this.options.checkpointRepository !== undefined) {
+        const tokenKey = this.collection.name;
+        if (this.isCheckpointSaveEnabled) {
             Logger.log("Checkpoint repository enabled");
-            return this.options.checkpointRepository.findByKey(this.options.checkpointKey)
+            return this.options.checkpointConfig!.resumeTokenRepository.findByKey(tokenKey)
                 .then(checkpoint => {
-                    if (checkpoint) {
-                        return this.collection.watch(this.options.aggregationPipeline, {
-                            resumeAfter: { _data: mongoose.mongo.Binary.createFromBase64(checkpoint.resumeToken.toString(), 0) },
-                            fullDocument: "updateLookup",
-                        });
-                    } else {
-                        Logger.warn(`No checkpoint found for given key ${this.options.checkpointKey}`);
-                        return this.collection.watch(this.options.aggregationPipeline, {fullDocument: "updateLookup"});
-                    }
-                });
+                if (checkpoint) {
+                    return this.collection.watch(this.options.aggregationPipeline, {
+                        resumeAfter: { _data: mongoose.mongo.Binary.createFromBase64(checkpoint.resumeToken.toString(), 0) },
+                        fullDocument: "updateLookup",
+                    });
+                } else {
+                    Logger.warn(`No checkpoint found for given key ${tokenKey}`);
+                    return this.collection.watch(this.options.aggregationPipeline, {fullDocument: "updateLookup"});
+                }
+            });
         } else {
             Logger.warn("Checkpoint disabled, will not save a resume checkpoint");
             return Promise.resolve(this.collection.watch(this.options.aggregationPipeline, {fullDocument: "updateLookup"}));

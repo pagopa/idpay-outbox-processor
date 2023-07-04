@@ -2,6 +2,10 @@ import {SourceInfo, SourceInfoRepository} from "./sourceInfo";
 import {HydratedDocument, Model} from "mongoose";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 
+/**
+ * An implementation of source info repository to store and retrieve
+ * resume token for a specific source. This implementation relies on mongodb as backend.
+ */
 export class MongoSourceInfoRepository implements SourceInfoRepository {
 
     constructor(

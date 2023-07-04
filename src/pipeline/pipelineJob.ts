@@ -4,9 +4,12 @@ import { StatisticsMonitor } from "../statisticsMonitor";
 import { from, lastValueFrom, map, tap } from "rxjs";
 import { retryWithBackoff } from "../source/rxExtension";
 import { Logger } from "@nestjs/common";
-import { Middleware } from "./middleware";
+import { PipelineStage } from "./pipelineStage";
 
-
+/**
+ * PipelineJob represent a job which consume message from source, 
+ * applies some transformations stage (optionally) and then publish it through a publisher.
+ */
 export class PipelineJob {
 
     private readonly statisticMonitor: StatisticsMonitor
@@ -16,7 +19,7 @@ export class PipelineJob {
     constructor(
         private readonly source: SourceConnector,
         private readonly publisher: Publisher,
-        private readonly stages: Middleware[],
+        private readonly stages: PipelineStage[],
         private readonly logger: Logger
     ) {
         this.statisticMonitor = new StatisticsMonitor(60_000);
@@ -42,6 +45,7 @@ export class PipelineJob {
         this.isActive = false;
     }
 
+    // Applies transformation stage if specified
     private applyStages(message: OutboxMessage): Promise<OutboxMessage> {
         const stagesResult = this.stages.reduce<Promise<OutboxMessage>>(
             (accumulator, current) => accumulator.then(m => typeof current === "function" ? current(m) : current.apply(m)),

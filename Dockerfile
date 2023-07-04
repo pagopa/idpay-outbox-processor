@@ -1,24 +1,18 @@
-FROM node:16-alpine as dev
-
-RUN apk update
+FROM node:18.16.1-alpine3.18@sha256:d5b2a7869a4016b1847986ea52098fa404421e44281bb7615a9e3615e07f37fb as dev
 
 WORKDIR /app
 
 # copy code, install deps and build
-COPY ./*.json ./
-COPY yarn.lock ./yarn.lock
-COPY src/ ./
+COPY . .
 RUN yarn install
-RUN npm run build
+RUN yarn run build
 
-# prune non prod deps
+# prune non prod dependencies
 RUN yarn install --production
 
-FROM node:16-alpine as prod
+FROM node:18.16.1-alpine3.18@sha256:d5b2a7869a4016b1847986ea52098fa404421e44281bb7615a9e3615e07f37fb as prod
 
 WORKDIR /app
-
-ENV NODE_ENV=production
 
 COPY --from=dev app/node_modules ./node_modules
 COPY --from=dev app/dist ./dist
