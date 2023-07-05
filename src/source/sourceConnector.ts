@@ -11,7 +11,7 @@ export class OutboxMessage {
 }
 
 export interface SourceConnector {
-    next(): Promise<OutboxMessage>
+    next(): Promise<OutboxMessage | undefined>
     close(): Promise<void>
     commit(message: OutboxMessage): Promise<any>;
 }

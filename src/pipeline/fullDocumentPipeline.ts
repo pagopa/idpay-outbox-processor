@@ -1,7 +1,7 @@
-import { Publisher } from "../../publisher/publisher";
-import { OutboxMessage, SourceConnector } from "../../source/sourceConnector";
-import { PipelineJob } from "../pipelineJob";
-import { PipelineStageProcessor } from "../pipelineStage";
+import { Publisher } from "../publisher/publisher";
+import { OutboxMessage, SourceConnector } from "../source/sourceConnector";
+import { PipelineJob } from "./pipelineJob";
+import { PipelineStageProcessor } from "./pipelineStage";
 import { Logger } from "@nestjs/common";
 
 export function createFullDocumentPipeline(name: string, source: SourceConnector, publisher: Publisher): PipelineJob {

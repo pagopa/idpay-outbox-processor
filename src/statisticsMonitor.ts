@@ -12,6 +12,8 @@ export class StatisticsMonitor {
     private messageDelayWindow = 10;
     private lastProcessTime: number | undefined
 
+    private metricsJob?: NodeJS.Timer = undefined;
+
     constructor(
         private readonly measureIntervalMillis: number
     ) {
@@ -21,7 +23,7 @@ export class StatisticsMonitor {
 
     start() {
         this.startTime = performance.now();
-        setInterval(() => {
+        this.metricsJob = setInterval(() => {
             const throughput = this.throughput / this.totalElapsedTime;
             this.throughput = 0;
             this.startTime = performance.now();
@@ -31,6 +33,12 @@ export class StatisticsMonitor {
             Logger.debug(`Estimated throughput: ${throughput.toFixed(2)} msg/s`, "PERFORMANCE");
             Logger.debug(`Average message delays ${averageDelay.toFixed(2)} ms`, "PERFORMANCE");
         }, this.measureIntervalMillis);
+    }
+
+    stop() {
+        if (this.metricsJob) {
+            clearInterval(this.metricsJob);
+        }
     }
 
     increaseConsumedMessage() {

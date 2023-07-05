@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { OutboxMessage } from "../source/sourceConnector";
 
 /**
