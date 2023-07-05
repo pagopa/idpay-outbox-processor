@@ -1,4 +1,3 @@
-import { HealthIndicator } from "@nestjs/terminus";
 import {SourceInfo} from "./mongo-cdc/sourceInfo";
 
 export class OutboxMessage {
@@ -11,7 +10,7 @@ export class OutboxMessage {
 }
 
 export interface SourceConnector {
-    next(): Promise<OutboxMessage>
+    next(): Promise<OutboxMessage | undefined>
     close(): Promise<void>
     commit(message: OutboxMessage): Promise<any>;
 }

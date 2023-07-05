@@ -1,10 +1,8 @@
 import {Controller, Get} from "@nestjs/common";
-import { ClientProxyFactory } from "@nestjs/microservices";
 import {
     HealthCheck,
     HealthCheckResult,
     HealthCheckService,
-    HealthIndicatorFunction,
     MicroserviceHealthIndicator,
     MongooseHealthIndicator
 } from "@nestjs/terminus";

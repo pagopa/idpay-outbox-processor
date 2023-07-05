@@ -1,7 +1,7 @@
-import { Publisher } from "../../publisher/publisher";
-import { OutboxMessage, SourceConnector } from "../../source/sourceConnector";
-import { PipelineJob } from "../pipelineJob";
-import { PipelineStageProcessor } from "../pipelineStage";
+import { Publisher } from "../publisher/publisher";
+import { OutboxMessage, SourceConnector } from "../source/sourceConnector";
+import { PipelineJob } from "./pipelineJob";
+import { PipelineStageProcessor } from "./pipelineStage";
 import { Logger } from "@nestjs/common";
 
 export function createFullDocumentPipeline(name: string, source: SourceConnector, publisher: Publisher): PipelineJob {
@@ -21,7 +21,7 @@ class MongoExtractFullDocument implements PipelineStageProcessor {
     ) {}
 
     apply(message: OutboxMessage): Promise<OutboxMessage> {
-        const fullDocument = (message?.value as any)?.fullDocument;
+        const fullDocument = (message.value as any)?.fullDocument;
         if (fullDocument) {
             return Promise.resolve(new OutboxMessage(message.key, message.key, fullDocument, message.source));
         } else {

@@ -24,7 +24,7 @@ export type AppConfig = z.infer<typeof appConfigSchema>;
 
 export const appConfig: AppConfig = appConfigSchema.parse({
     mongoDbUri: process.env.MONGO_DB_URI,
-    mongoDbName: process.env.MONGO_DB_NAME || "rtd",
+    mongoDbName: process.env.MONGO_DB_NAME ?? "rtd",
     outboxCollectionName: process.env.OUTBOX_COLLECTION_NAME,
     checkpointConfig: process.env.CHECKPOINT_MONGODB_URI ? {
         checkpointMongoUri: process.env.CHECKPOINT_MONGODB_URI,

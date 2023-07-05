@@ -1,12 +1,11 @@
-import { Logger } from "@nestjs/common";
 import { Publisher } from "../publisher/publisher";
 import { SourceConnector } from "../source/sourceConnector";
 import { PipelineJob } from "./pipelineJob";
-import { createFullDocumentPipeline } from "./impl/fullDocumentPipeline";
+import { createFullDocumentPipeline } from "./fullDocumentPipeline";
 
 export interface PipelineConfig {
     name: string
-    type: "nested-outbox" | "full"
+    type: "full"
 }
 
 export namespace PipelineFactory {

@@ -5,7 +5,6 @@ import {OutboxMessage, SourceConnector} from "../sourceConnector";
 import {MongoSourceCdcConnectorConfig} from "./mongoSourceCdcConnectorConfig";
 import {SourceInfo} from "./sourceInfo";
 import {sleep} from "../../utils";
-import { HealthIndicator, MongooseHealthIndicator } from "@nestjs/terminus";
 
 const defaultConfig: MongoSourceCdcConnectorConfig = {
     aggregationPipeline: [{$match: {operationType: "insert"}}],
@@ -25,20 +24,26 @@ export class MongoSourceCdcConnector implements SourceConnector {
     private cursor?: mongoose.mongo.ChangeStream<any, any>;
     private committedMessages: number = 0;
     private isCheckpointSaveEnabled = false;
+    private isIdle = false;
 
     constructor(
         private readonly options: MongoSourceCdcConnectorConfig = defaultConfig,
         readonly collection: Collection<AnyObject>
     ) {
-        this.isCheckpointSaveEnabled = (options.checkpointConfig && options.checkpointConfig.resumeTokenSavePolicy != undefined) ?? false
+        this.isCheckpointSaveEnabled = options.checkpointConfig?.resumeTokenSavePolicy != undefined
     }
 
-    async next(): Promise<OutboxMessage> {
-        let next = await this.tryGetNext();
-        while (next == undefined) {
+    public get connection() : mongoose.Connection {
+        return this.collection.conn;
+    }
+    
+
+    async next(): Promise<OutboxMessage | undefined> {
+        if (this.isIdle) {
             await sleep(this.options?.idleTimeoutMillis ?? 1000);
-            next = await this.tryGetNext();
         }
+        let next = await this.tryGetNext();
+        this.isIdle = next == undefined;
         return next;
     }
 
@@ -47,13 +52,14 @@ export class MongoSourceCdcConnector implements SourceConnector {
             const shouldSave = this.options.checkpointConfig?.resumeTokenSavePolicy?.call(this, this.committedMessages + 1, message);
 
             if (shouldSave && message.source) {
-                return this.options.checkpointConfig!.resumeTokenRepository.save(message.source!)
-                    .then(_ => this.committedMessages = 0);
+                return this.options.checkpointConfig!.resumeTokenRepository.save(message.source)
+                    .then(_ => this.committedMessages = 0)
+                    .then(_ => message);
             } else if (!message.source) {
                 Logger.warn("No checkpoint for message, could lead to message duplication")
             }
         }
-        return Promise.resolve();
+        return Promise.resolve(message);
     }
 
     async close(): Promise<void> {
@@ -75,7 +81,7 @@ export class MongoSourceCdcConnector implements SourceConnector {
                     change.documentKey._id,
                     change.documentKey._id,
                     change,
-                    resumeToken && new SourceInfo(this.collection.name, resumeToken["_data"].toJSON())
+                    resumeToken && new SourceInfo(this.collection.name, resumeToken["_data"])
                 );
             }
         } catch (e) {
@@ -100,7 +106,7 @@ export class MongoSourceCdcConnector implements SourceConnector {
     }
 
     private async getOrCreateCursor(): Promise<mongoose.mongo.ChangeStream<any, any>> {
-        if (!this.cursor) {
+        if (this.cursor == undefined) {
             this.cursor = await this.createOrResumeStream();
         }
         return this.cursor;
@@ -115,7 +121,7 @@ export class MongoSourceCdcConnector implements SourceConnector {
                 .then(checkpoint => {
                 if (checkpoint) {
                     return this.collection.watch(this.options.aggregationPipeline, {
-                        resumeAfter: { _data: mongoose.mongo.Binary.createFromBase64(checkpoint.resumeToken.toString(), 0) },
+                        resumeAfter: { _data: checkpoint.resumeToken.toString() },
                         fullDocument: "updateLookup",
                     });
                 } else {
