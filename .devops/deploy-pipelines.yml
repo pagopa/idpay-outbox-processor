@@ -3,7 +3,7 @@
 
 parameters:
   - name: 'executeBuild'
-    displayName: 'Launch gradle and docker build'
+    displayName: 'Execute build'
     type: boolean
     default: true
 
@@ -123,8 +123,8 @@ stages:
     displayName: 'Publish Helm Artifact'
     dependsOn: ['build']
     jobs:
-      - job: Publish Artifact Helm
-        displayName: Publish_artifact_helm
+      - job: Publish_artifact_helm
+        displayName: Publish Artifact Helm
         pool:
           vmImage: $(vmImageNameDefault)
         steps:
