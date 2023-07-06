@@ -3,8 +3,6 @@ import {
     HealthCheck,
     HealthCheckResult,
     HealthCheckService,
-    MicroserviceHealthIndicator,
-    MongooseHealthIndicator
 } from "@nestjs/terminus";
 
 @Controller("health")
@@ -12,8 +10,6 @@ export class HealthController {
 
     constructor(
         private healthCheck: HealthCheckService,
-        private mongooseHealth: MongooseHealthIndicator,
-        private microserviceHealth: MicroserviceHealthIndicator
     ) {
     }
 
@@ -21,11 +17,12 @@ export class HealthController {
     @Get()
     @HealthCheck()
     async check(): Promise<HealthCheckResult> {
-        return this.healthCheck.check(
-            [
-                () => this.mongooseHealth.pingCheck("sourceDB"),
-                () => this.mongooseHealth.pingCheck("checkpointConnection"),
-            ],
-        );
+        return this.healthCheck.check([
+            () => ({
+                'app': {
+                    status: 'up'
+                }
+            })
+        ]);
     }
 }

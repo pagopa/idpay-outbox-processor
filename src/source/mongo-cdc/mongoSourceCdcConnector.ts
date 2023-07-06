@@ -22,21 +22,21 @@ export class MongoSourceCdcConnector implements SourceConnector {
     ]);
 
     private cursor?: mongoose.mongo.ChangeStream<any, any>;
-    private committedMessages: number = 0;
-    private isCheckpointSaveEnabled = false;
-    private isIdle = false;
+    private messagesFromLastCommit: number = 0;
+    private isCheckpointSaveEnabled;
+    private isIdle;
 
     constructor(
         private readonly options: MongoSourceCdcConnectorConfig = defaultConfig,
         readonly collection: Collection<AnyObject>
     ) {
         this.isCheckpointSaveEnabled = options.checkpointConfig?.resumeTokenSavePolicy != undefined
+        this.isIdle = false;
     }
 
     public get connection() : mongoose.Connection {
         return this.collection.conn;
     }
-    
 
     async next(): Promise<OutboxMessage | undefined> {
         if (this.isIdle) {
@@ -49,11 +49,11 @@ export class MongoSourceCdcConnector implements SourceConnector {
 
     commit(message: OutboxMessage): Promise<any> {
         if (this.isCheckpointSaveEnabled) {
-            const shouldSave = this.options.checkpointConfig?.resumeTokenSavePolicy?.call(this, this.committedMessages + 1, message);
+            const shouldSave = this.options.checkpointConfig?.resumeTokenSavePolicy?.call(this, this.messagesFromLastCommit + 1, message);
 
             if (shouldSave && message.source) {
                 return this.options.checkpointConfig!.resumeTokenRepository.save(message.source)
-                    .then(_ => this.committedMessages = 0)
+                    .then(_ => this.messagesFromLastCommit = 0)
                     .then(_ => message);
             } else if (!message.source) {
                 Logger.warn("No checkpoint for message, could lead to message duplication")
