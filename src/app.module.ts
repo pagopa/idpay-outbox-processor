@@ -17,9 +17,7 @@ import { LogPublisher } from './publisher/logPublisher';
 })
 export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown {
 
-    constructor(
-        private readonly healthController: HealthController
-    ) { }
+    constructor() { }
 
     async onApplicationBootstrap() {
         const source = await MongoSourceCdcConnectorFactory.fromConfig({
