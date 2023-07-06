@@ -4,7 +4,7 @@ WORKDIR /app
 
 # copy code, install deps and build
 COPY . .
-RUN yarn install
+RUN yarn install --frozen-lockfile
 RUN yarn run build
 
 # prune non prod dependencies

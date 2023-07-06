@@ -1,6 +1,6 @@
 microservice-chart:
   image:
-    repository: cstardcommonacr.azurecr.io/idpaymsoutboxprocessor
+    repository: cstardcommonacr.azurecr.io/idpayoutboxprocessor
     tag: latest
     pullPolicy: Always
 

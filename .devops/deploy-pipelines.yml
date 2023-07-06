@@ -1,0 +1,203 @@
+# Build and push image to Azure Container Registry; Deploy to Azure Kubernetes Service
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+parameters:
+  - name: 'executeBuild'
+    displayName: 'Launch gradle and docker build'
+    type: boolean
+    default: true
+
+trigger:
+  branches:
+    include:
+      - develop
+#      - uat
+#      - main
+  paths:
+    include:
+      - src/*
+      - helm/*
+      - Dockerfile
+      - yarn.lock
+      - package.json
+      - nest-cli.json
+      - tsconfig.json
+      - tsconfig.build.json
+
+pr: none
+
+resources:
+  - repo: self
+
+variables:
+
+  vmImageNameDefault: 'ubuntu-latest'
+
+  imageRepository: '$(K8S_IMAGE_REPOSITORY_NAME)'
+  deployNamespace: '$(DEPLOY_NAMESPACE)'
+  helmReleaseName : '$(HELM_RELEASE_NAME)'
+  settingsXmlROsecureFileName: '$(SETTINGS_XML_RO_SECURE_FILE_NAME)'
+  settingsXmlSecureFileName: '$(SETTINGS_XML_RO_SECURE_FILE_NAME)'
+  canDeploy: true
+
+  # If the branch is develop or a feature branch starting with CEN, deploy in DEV environment
+  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/develop') }}:
+    environment: 'DEV'
+    dockerRegistryServiceConnection: '$(DEV_CONTAINER_REGISTRY_SERVICE_CONN)'
+    kubernetesServiceConnection: '$(DEV_KUBERNETES_SERVICE_CONN)'
+    containerRegistry: '$(DEV_CONTAINER_REGISTRY_NAME)'
+    selfHostedAgentPool: $(DEV_AGENT_POOL)
+
+  # ${{ elseif startsWith(variables['Build.SourceBranch'], 'refs/heads/uat') }}:
+  #   environment: 'UAT'
+  #   componentTest: false
+  #   dockerRegistryServiceConnection: '$(UAT_CONTAINER_REGISTRY_SERVICE_CONN)'
+  #   kubernetesServiceConnection: '$(UAT_KUBERNETES_SERVICE_CONN)'
+  #   containerRegistry: '$(UAT_CONTAINER_REGISTRY_NAME)'
+  #   selfHostedAgentPool: $(UAT_AGENT_POOL)
+
+  #  ${{ elseif or(startsWith(variables['Build.SourceBranch'], 'refs/heads/main'), eq(parameters.ENV, 'PROD')) }}:
+  #    environment: 'PROD'
+  #    dockerRegistryServiceConnection: '$(PROD_CONTAINER_REGISTRY_SERVICE_CONN)'
+  #    kubernetesServiceConnection: '$(PROD_KUBERNETES_SERVICE_CONN)'
+  #    containerRegistry: '$(PROD_CONTAINER_REGISTRY_NAME)'
+  #    selfHostedAgentPool: $(PROD_AGENT_POOL)
+
+  ${{ else }}:
+    environment: 'DEV'
+    dockerRegistryServiceConnection: '$(DEV_CONTAINER_REGISTRY_SERVICE_CONN)'
+    kubernetesServiceConnection: '$(DEV_KUBERNETES_SERVICE_CONN)'
+    containerRegistry: '$(DEV_CONTAINER_REGISTRY_NAME)'
+    selfHostedAgentPool: $(DEV_AGENT_POOL)
+
+stages:
+  - stage: 'project_version'
+    displayName: Prepare Release
+    condition: eq(variables.canDeploy, true)
+    jobs:
+      - job: ProjectVersion
+        displayName: Extract project version from package.json
+        pool:
+          vmImage: $(vmImageNameDefault)
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSource: 'spec'
+              versionSpec: '18.16.1'
+          - task: Bash@3
+            displayName: Get Project version
+            name: getprojectversion
+            condition: and(succeeded(), eq(variables.canDeploy, true))
+            inputs:
+              targetType: 'inline'
+              script: |
+                version=$(npm pkg get version | tr -d \")
+                echo "##vso[task.setvariable variable=outputProjectVersion;isOutput=true]$version"
+              failOnStderr: true
+              
+  - stage: 'build'
+    displayName: 'Build and publish to ${{ variables.environment }}'
+    dependsOn: 'project_version'
+    variables:
+      projectVersion: $[ stageDependencies.project_version.ProjectVersion.outputs['getprojectversion.outputProjectVersion'] ]
+    jobs:
+      - job: Build
+        displayName: Build
+        pool:
+          vmImage: $(vmImageNameDefault)
+        steps:
+          - task: Docker@2
+            condition: and(succeeded(), ${{ parameters.executeBuild }})
+            displayName: 'Publish_image_to_${{ variables.environment }}'
+            inputs:
+              containerRegistry: '$(dockerRegistryServiceConnection)'
+              repository: '$(imageRepository)'
+              command: 'buildAndPush'
+              Dockerfile: 'Dockerfile'
+              tags: |
+                $(Build.BuildId)
+                latest
+                $(projectVersion)
+                
+  - stage: 'publish_artifact_helm'
+    displayName: 'Publish Helm Artifact'
+    dependsOn: ['build']
+    jobs:
+      - job: Publish_artifact_helm
+        displayName: Publish_artifact_helm
+        pool:
+          vmImage: $(vmImageNameDefault)
+        steps:
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Artifact manifests'
+            condition: succeeded()
+            inputs:
+              targetPath: '$(Build.Repository.LocalPath)/helm/idpay'
+              artifact: 'helm'
+              publishLocation: 'pipeline'
+
+  - stage: 'deploy'
+    displayName: 'Deploy to ${{ variables.environment }} K8S'
+    dependsOn: ['publish_artifact_helm']
+    condition: and(succeeded(), eq(variables.canDeploy, true))
+    variables:
+      projectVersion: $[ stageDependencies.project_version.ProjectVersion.outputs['getprojectversion.outputProjectVersion'] ]
+    jobs:
+      - deployment: 'Deploy_to_${{ variables.environment }}'
+        displayName: 'Deploy to ${{ variables.environment }} K8S'
+        pool:
+          name: $(selfHostedAgentPool)
+        environment: '$(environment)'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: none
+                - task: DownloadPipelineArtifact@2
+                  inputs:
+                    buildType: 'current'
+                    artifactName: 'helm'
+                    targetPath: '$(Pipeline.Workspace)/helm/idpay'
+                - task: Bash@3
+                  name: helm_dependency_build
+                  displayName: Helm dependency build
+                  inputs:
+                    workingDirectory: '$(Pipeline.Workspace)/helm/idpay'
+                    targetType: 'inline'
+                    script: |
+                      helm repo add pagopa-microservice https://pagopa.github.io/aks-microservice-chart-blueprint
+                      helm dep build
+                    failOnStderr: true
+                - task: Bash@3
+                  name: helm_template
+                  displayName: Helm template
+                  inputs:
+                    workingDirectory: '$(Pipeline.Workspace)/helm/idpay'
+                    targetType: 'inline'
+                    script: |
+                      helm template . -f values-${{ lower(variables.environment) }}.yaml
+                    failOnStderr: true
+                - task: HelmDeploy@0
+                  displayName: Helm upgrade
+                  inputs:
+                    kubernetesServiceEndpoint: ${{ variables.kubernetesServiceConnection }}
+                    namespace: '$(deployNamespace)'
+                    command: upgrade
+                    chartType: filepath
+                    chartPath: $(Pipeline.Workspace)/helm/idpay
+                    chartName: ${{ variables.helmReleaseName }}
+                    releaseName: ${{ variables.helmReleaseName }}
+                    valueFile: "$(Pipeline.Workspace)/helm/idpay/values-${{ lower(variables.environment) }}.yaml"
+                    install: true
+                    waitForExecution: true
+                    arguments: "--timeout 5m00s --debug"
+                - task: KubernetesManifest@0
+                  displayName: Patch with BuildId
+                  inputs:
+                    kubernetesServiceConnection: ${{ variables.kubernetesServiceConnection }}
+                    namespace: '$(deployNamespace)'
+                    action: patch
+                    kind: deployment
+                    name: '$(helmReleaseName)-microservice-chart'
+                    mergeStrategy: strategic
+                    patch: '{"spec":{"template":{"metadata":{"annotations":{"buildNumber":"$(Build.BuildId)"}}}}}'

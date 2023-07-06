@@ -38,7 +38,7 @@ steps:
   - script: npm install --global yarn
     displayName: "Install Yarn"
   - script: |
-      yarn install
+      yarn install --frozen-lockfile
       yarn run test:ci:cov
     displayName: "Run tests and collecting coverage"
   - task: SonarCloudAnalyze@1
