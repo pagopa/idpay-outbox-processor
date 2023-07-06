@@ -5,7 +5,7 @@ microservice-chart:
     pullPolicy: Always
 
   ingress:
-    host: "dev01.rtd.internal.dev.cstar.pagopa.it"
+    host: "dev01.idpay.internal.dev.cstar.pagopa.it"
 
   resources:
     requests:
@@ -17,12 +17,12 @@ microservice-chart:
 
   envSecret:
     aks-api-url: cstar-d-weu-dev01-aks-apiserver-url
-    MONGO_DB_URI: mongo-db-connection-uri
+    MONGO_DB_URI: mongodb-connection-string
 
   envConfig:
-    OUTBOX_COLLECTION_NAME: "test"
-    MONGO_DB_NAME: "rtd"
+    OUTBOX_COLLECTION_NAME: "transaction_in_progress"
+    MONGO_DB_NAME: "idpay"
 
   keyvault:
-    name: "cstar-d-rtd-kv"
+    name: "cstar-d-idpay-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
