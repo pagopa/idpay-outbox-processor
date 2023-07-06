@@ -1,25 +1,28 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
 
-trigger:
-- develop
-
+pr:
+  autoCancel: false
+  branches:
+    include:
+      - main
+      - develop
+      - uat
 pool:
-  name: Default
-  vmImage: ubuntu-latest
+  #vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-22.04
 
 steps:
   - task: SonarCloudPrepare@1
     displayName: 'Prepare SonarCloud analysis configuration'
     inputs:
-      SonarCloud: 'SonarCloud'
-      organization: 'petretiandrea-1'
+      SonarCloud: '$(SONARCLOUD_SERVICE_CONN)'
+      organization: '$(SONARCLOUD_ORG)'
       scannerMode: 'CLI'
       configMode: 'manual'
-      cliProjectKey: 'petretiandrea_spring-boot3'
-      cliProjectName: 'spring-boot3'
+      cliProjectKey: '$(SONARCLOUD_PROJECT_KEY)'
+      cliProjectName: '$(SONARCLOUD_PROJECT_NAME)'
       cliSources: './src'
       extraProperties: |
         sonar.javascript.lcov.reportPaths=./coverage/lcov.info
@@ -27,23 +30,22 @@ steps:
         sonar.typescript.tsconfigPaths=tsconfig.json,tsconfig.build.json
         sonar.test.inclusions=**/__tests__/*, **/*.spec.ts
         sonar.coverage.exclusions=src/main.ts,src/app.module.ts,src/statisticsMonitor.ts,src/publisher/logPublisher.ts,src/config/*.ts,test/integrationUtils.ts
-
-
   - task: NodeTool@0
+    displayName: 'Install Node'
     inputs:
       versionSource: 'spec'
       versionSpec: '18.16.1'
   - script: npm install --global yarn
     displayName: "Install Yarn"
-  
   - script: |
       yarn install
       yarn run test:ci:cov
     displayName: "Run tests and collecting coverage"
-    
   - task: SonarCloudAnalyze@1
+    displayName: 'Sonar cloud analysis'
     inputs:
-      jdkversion: 'JAVA_HOME_11_X64'
+      jdkversion: 'JAVA_HOME'
   - task: SonarCloudPublish@1
+    displayName: 'Publish result to sonarcloud'
     inputs:
       pollingTimeoutSec: '300'

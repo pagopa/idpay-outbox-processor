@@ -1,6 +1,6 @@
 apiVersion: v2
 name: idpay-outbox-processor
-description: Micro-service designed to manage the payment instruments enrolled from applications
+description: A simple CDC outbox processor implementation using Node
 type: application
 version: 1.0.0
 appVersion: 1.0.0

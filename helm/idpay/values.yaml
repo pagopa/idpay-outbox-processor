@@ -1,5 +1,5 @@
 microservice-chart:
-  namespace: "rtd"
+  namespace: "idpay"
   nameOverride: ""
   fullnameOverride: ""
 

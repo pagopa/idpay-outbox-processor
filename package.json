@@ -1,6 +1,6 @@
 {
-  "name": "outbox-processor",
-  "version": "0.0.1",
+  "name": "idpay-outbox-processor",
+  "version": "1.0.0",
   "description": "",
   "author": "",
   "private": true,
