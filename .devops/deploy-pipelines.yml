@@ -3,7 +3,7 @@
 
 parameters:
   - name: 'executeBuild'
-    displayName: 'Launch gradle and docker build'
+    displayName: 'Execute build'
     type: boolean
     default: true
 
@@ -124,7 +124,7 @@ stages:
     dependsOn: ['build']
     jobs:
       - job: Publish_artifact_helm
-        displayName: Publish_artifact_helm
+        displayName: Publish Artifact Helm
         pool:
           vmImage: $(vmImageNameDefault)
         steps:
@@ -191,13 +191,3 @@ stages:
                     install: true
                     waitForExecution: true
                     arguments: "--timeout 5m00s --debug"
-                - task: KubernetesManifest@0
-                  displayName: Patch with BuildId
-                  inputs:
-                    kubernetesServiceConnection: ${{ variables.kubernetesServiceConnection }}
-                    namespace: '$(deployNamespace)'
-                    action: patch
-                    kind: deployment
-                    name: '$(helmReleaseName)-microservice-chart'
-                    mergeStrategy: strategic
-                    patch: '{"spec":{"template":{"metadata":{"annotations":{"buildNumber":"$(Build.BuildId)"}}}}}'

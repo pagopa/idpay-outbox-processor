@@ -24,7 +24,7 @@ export class StatisticsMonitor {
     start() {
         this.startTime = performance.now();
         this.metricsJob = setInterval(() => {
-            const throughput = this.throughput / this.totalElapsedTime;
+            const throughput = this.throughput / this.measureIntervalMillis / 1000;
             this.throughput = 0;
             this.startTime = performance.now();
 
@@ -44,7 +44,6 @@ export class StatisticsMonitor {
     increaseConsumedMessage() {
         const now = performance.now();
         this.throughput += 1;
-        this.totalElapsedTime = (now - this.startTime) / 1000; // Convert to seconds
         if (this.lastProcessTime) {
             const newDelay = now - this.lastProcessTime;
             this.messageDelays[this.nextMessageDelayIndex] = newDelay;

@@ -4,6 +4,7 @@ import { lastValueFrom } from "rxjs";
 import { OutboxMessage } from "../source/sourceConnector";
 import { Publisher } from "./publisher";
 import { Partitioners } from "kafkajs";
+import { DocumentFormatter, simplifiedFormatter } from "./jsonFormatter";
 
 /**
  * Publisher configuration. Actually only kafka is supported
@@ -30,15 +31,17 @@ export class KafkaPublisher implements Publisher {
         private readonly kafka: ClientKafka,
         private readonly topic: string,
         private readonly logger: Logger = new Logger(KafkaPublisher.name),
+        private readonly formatter: DocumentFormatter = simplifiedFormatter
     ) {
         this.connectPromise = kafka.connect().then(_ => Logger.log("Connected to broker")).catch(error => Logger.error(error));
-     }
+    }
 
     async send(message: OutboxMessage): Promise<OutboxMessage> {
         await this.connectPromise;
+        const payload = this.formatter(message.value);
         this.logger.log(`Send evento to kafka for document ${JSON.stringify(message.key)}`);
         return lastValueFrom(this.kafka.emit(this.topic, {
-            value: JSON.stringify(message.value),
+            value: payload,
             key: message.key
         })).then(_ => message);
     }

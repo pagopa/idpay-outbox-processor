@@ -8,7 +8,7 @@ microservice-chart:
     httpGet:
       path: /health
       port: 3000
-    initialDelaySeconds: 30
+    initialDelaySeconds: 2
     failureThreshold: 6
     periodSeconds: 10
 
@@ -17,7 +17,7 @@ microservice-chart:
     httpGet:
       path: /health
       port: 3000
-    initialDelaySeconds: 30
+    initialDelaySeconds: 2
     failureThreshold: 6
     periodSeconds: 10
 

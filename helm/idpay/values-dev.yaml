@@ -22,6 +22,7 @@ microservice-chart:
   envConfig:
     OUTBOX_COLLECTION_NAME: "transaction_in_progress"
     MONGO_DB_NAME: "idpay"
+    LOG_LEVEL: "log"
 
   keyvault:
     name: "cstar-d-idpay-kv"
