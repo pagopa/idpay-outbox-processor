@@ -6,6 +6,7 @@ import { HealthController } from './health/healthController';
 import { MongoSourceCdcConnectorFactory } from './source/mongo-cdc/mongoSourceCdcConnectorFactory';
 import { KafkaPublisher } from './publisher/kafkaPublisher';
 import { LogPublisher } from './publisher/logPublisher';
+import { PipelineJob } from './pipeline/pipelineJob';
 
 @Module({
     imports: [
@@ -16,6 +17,8 @@ import { LogPublisher } from './publisher/logPublisher';
     ]
 })
 export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown {
+
+    private pipeline?: PipelineJob
 
     constructor() { }
 
@@ -39,11 +42,17 @@ export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown 
         // pipeline job
         const pipelineConfig: PipelineConfig = { name: "defaultPipeline", type: "full" }
         PipelineFactory.fromConfig(pipelineConfig, source, publisher)
-            .then(job => job.start())
+            .then(job => {
+                this.pipeline = job;
+                job.start();
+            })
             .catch(error => Logger.error(error));
     }
 
     onApplicationShutdown(signal?: string | undefined) {
-        throw new Error('Method not implemented.');
+        // graceful shutdown
+        if (signal == "SIGTERM") {
+            this.pipeline?.stop();
+        }
     }
 }

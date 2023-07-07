@@ -1,5 +1,5 @@
-import * as dotenv from "dotenv"
-import * as z from "zod"
+import * as dotenv from "dotenv";
+import * as z from "zod";
 
 // load environment variables from .env file. 
 // It's useful for local developing
@@ -17,7 +17,8 @@ const appConfigSchema = z.object({
         broker: z.string(),
         topic: z.string(),
         saslJaas: z.string().optional()
-    }).optional()
+    }).optional(),
+    logLevel: z.enum(['debug', 'log', 'warn', 'error']).optional().default('log')
 });
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
@@ -34,5 +35,6 @@ export const appConfig: AppConfig = appConfigSchema.parse({
         broker: process.env.OUTBOX_KAFKA_BROKER,
         topic: process.env.OUTBOX_KAFKA_TOPIC,
         saslJass: process.env.OUTBOX_KAFKA_SASL_JAAS,
-    } : undefined
+    } : undefined,
+    logLevel: process.env.LOG_LEVEL
 });
