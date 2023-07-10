@@ -6,6 +6,7 @@ import * as z from "zod";
 dotenv.config();
 
 const appConfigSchema = z.object({
+    formatter: z.enum(["relaxed", "simplified"]).optional().default("relaxed"),
     mongoDbUri: z.string().nonempty(),
     mongoDbName: z.string().nonempty(),
     outboxCollectionName: z.string().nonempty(),
@@ -24,6 +25,7 @@ const appConfigSchema = z.object({
 export type AppConfig = z.infer<typeof appConfigSchema>;
 
 export const appConfig: AppConfig = appConfigSchema.parse({
+    formatter: process.env.FORMAT_TYPE,
     mongoDbUri: process.env.MONGO_DB_URI,
     mongoDbName: process.env.MONGO_DB_NAME ?? "rtd",
     outboxCollectionName: process.env.OUTBOX_COLLECTION_NAME,
