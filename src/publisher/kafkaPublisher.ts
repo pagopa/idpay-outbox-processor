@@ -33,6 +33,7 @@ export class KafkaPublisher implements Publisher {
         private readonly topic: string,
         private readonly formatter: DocumentFormatter = simplifiedFormatter,
         private readonly logger: Logger = new Logger(KafkaPublisher.name),
+        private readonly formatter: DocumentFormatter = simplifiedFormatter
     ) {
         this.connectPromise = kafka.connect().then(_ => Logger.log("Connected to broker")).catch(error => Logger.error(error));
     }
