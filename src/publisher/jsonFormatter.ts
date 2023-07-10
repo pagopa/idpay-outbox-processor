@@ -12,7 +12,7 @@ export const simplifiedFormatter = function(document: mongo.BSON.Document) {
 }
 
 function simplifyRelaxedDocument(key: string, value: any) {
-    if (typeof(value) == "object") {
+    if (value && typeof(value) == "object") {
         if (value["$numberDecimal"]) {
             return value["$numberDecimal"].toString();
         } else if (value["$oid"]) {

@@ -10,6 +10,7 @@ import { DocumentFormatter, simplifiedFormatter } from "./jsonFormatter";
  * Publisher configuration. Actually only kafka is supported
  */
 export interface KafkaPublisherConfig {
+    formatter: DocumentFormatter,
     topic: string,
     broker: string,
     sasl_jaas: string | undefined
@@ -22,7 +23,7 @@ export class KafkaPublisher implements Publisher {
 
     static fromConfig(config: KafkaPublisherConfig) {
         const clientProxy = createKafkaClientNestJS(config.broker, config.sasl_jaas);
-        return new KafkaPublisher(clientProxy, config.topic);
+        return new KafkaPublisher(clientProxy, config.topic, config.formatter);
     }
 
     private connectPromise;
@@ -30,8 +31,8 @@ export class KafkaPublisher implements Publisher {
     constructor(
         private readonly kafka: ClientKafka,
         private readonly topic: string,
+        private readonly formatter: DocumentFormatter = simplifiedFormatter,
         private readonly logger: Logger = new Logger(KafkaPublisher.name),
-        private readonly formatter: DocumentFormatter = simplifiedFormatter
     ) {
         this.connectPromise = kafka.connect().then(_ => Logger.log("Connected to broker")).catch(error => Logger.error(error));
     }

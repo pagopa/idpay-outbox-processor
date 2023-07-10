@@ -9,6 +9,7 @@ import { LogPublisher } from './publisher/logPublisher';
 import { PipelineJob } from './pipeline/pipelineJob';
 import { MongoSourceCdcConnector } from './source/mongo-cdc/mongoSourceCdcConnector';
 import { Publisher } from './publisher/publisher';
+import { relaxedFormatter, simplifiedFormatter } from './publisher/jsonFormatter';
 
 @Module({
     imports: [
@@ -36,6 +37,7 @@ import { Publisher } from './publisher/publisher';
             provide: 'Publisher',
             useFactory: () => {
                 return appConfig.kafkaConfig ? KafkaPublisher.fromConfig({
+                    formatter: appConfig.formatter == 'relaxed' ? relaxedFormatter : simplifiedFormatter,
                     broker: appConfig.kafkaConfig.broker,
                     topic: appConfig.kafkaConfig.topic,
                     sasl_jaas: appConfig.kafkaConfig.saslJaas
