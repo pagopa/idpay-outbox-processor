@@ -17,6 +17,8 @@ function simplifyRelaxedDocument(key: string, value: any) {
             return value["$numberDecimal"].toString();
         } else if (value["$oid"]) {
             return value["$oid"].toString();
+        } else if (value["$date"]) {
+            return value["$date"].toString();
         }
     }
     return value;
